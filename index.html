@@ -1,0 +1,1250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Indo Park Runner</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            overflow: hidden; 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #0a0a1a;
+            touch-action: none;
+        }
+        canvas { display: block; }
+        
+        /* UI Screens */
+        .screen {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transition: opacity 0.5s;
+            z-index: 100;
+        }
+        .screen.hidden { opacity: 0; pointer-events: none; }
+        
+        /* Menu Screen */
+        #menu-screen {
+            background: linear-gradient(135deg, #1a0a2e 0%, #16213e 50%, #0f3460 100%);
+        }
+        .title {
+            font-size: clamp(2rem, 8vw, 5rem);
+            font-weight: 900;
+            background: linear-gradient(45deg, #ff6b35, #f7c948, #ff6b35);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-shadow: 0 0 40px rgba(255,107,53,0.5);
+            margin-bottom: 10px;
+            letter-spacing: 2px;
+        }
+        .subtitle {
+            color: #8892b0;
+            font-size: clamp(0.8rem, 3vw, 1.2rem);
+            margin-bottom: 40px;
+            letter-spacing: 4px;
+            text-transform: uppercase;
+        }
+        .btn {
+            padding: 15px 50px;
+            font-size: clamp(1rem, 4vw, 1.3rem);
+            font-weight: 700;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin: 10px;
+        }
+        .btn-primary {
+            background: linear-gradient(45deg, #ff6b35, #f7c948);
+            color: #1a0a2e;
+            box-shadow: 0 10px 40px rgba(255,107,53,0.4);
+        }
+        .btn-primary:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 50px rgba(255,107,53,0.6);
+        }
+        .btn-secondary {
+            background: transparent;
+            color: #64ffda;
+            border: 2px solid #64ffda;
+        }
+        .btn-secondary:hover {
+            background: rgba(100,255,218,0.1);
+        }
+        .best-score {
+            color: #f7c948;
+            font-size: 1.1rem;
+            margin-bottom: 20px;
+            letter-spacing: 2px;
+        }
+        
+        /* Selection Screen */
+        #select-screen {
+            background: linear-gradient(135deg, #1a0a2e 0%, #16213e 100%);
+        }
+        .section-title {
+            color: #64ffda;
+            font-size: clamp(1.2rem, 4vw, 1.8rem);
+            margin: 30px 0 20px;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+        }
+        .selection-grid {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            justify-content: center;
+            max-width: 90vw;
+        }
+        .selection-item {
+            width: clamp(80px, 20vw, 120px);
+            height: clamp(80px, 20vw, 120px);
+            border: 3px solid #3a4a6a;
+            border-radius: 15px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            background: rgba(255,255,255,0.05);
+            color: #ccd6f6;
+            font-weight: 600;
+            font-size: 0.9rem;
+            text-align: center;
+            padding: 10px;
+        }
+        .selection-item:hover { border-color: #64ffda; transform: scale(1.05); }
+        .selection-item.selected { 
+            border-color: #f7c948; 
+            background: rgba(247,201,72,0.15);
+            box-shadow: 0 0 30px rgba(247,201,72,0.3);
+        }
+        .selection-item .icon { font-size: clamp(2rem, 8vw, 3rem); margin-bottom: 5px; }
+        .selection-item .name { font-size: 0.75rem; }
+        
+        /* HUD */
+        #hud {
+            position: fixed;
+            top: 20px; left: 20px; right: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            pointer-events: none;
+            z-index: 50;
+        }
+        .hud-item {
+            background: rgba(0,0,0,0.6);
+            padding: 10px 20px;
+            border-radius: 25px;
+            color: white;
+            font-weight: 700;
+            font-size: clamp(0.9rem, 3vw, 1.2rem);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        .hud-icon { margin-right: 8px; }
+        #score-display { color: #f7c948; }
+        #coin-display { color: #64ffda; }
+        #powerup-display { color: #ff6b35; min-width: 60px; text-align: center; }
+        
+        /* Game Over */
+        #gameover-screen {
+            background: rgba(10,10,26,0.95);
+        }
+        .gameover-title {
+            font-size: clamp(2rem, 10vw, 4rem);
+            color: #ff6b35;
+            margin-bottom: 20px;
+            text-transform: uppercase;
+            letter-spacing: 5px;
+        }
+        .final-stats {
+            display: flex;
+            gap: 30px;
+            margin: 30px 0;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        .stat {
+            text-align: center;
+            color: #ccd6f6;
+        }
+        .stat-value {
+            font-size: clamp(2rem, 8vw, 3.5rem);
+            font-weight: 900;
+            color: #64ffda;
+            display: block;
+        }
+        .stat-label {
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: #8892b0;
+        }
+        .new-best {
+            color: #f7c948;
+            font-size: 1.2rem;
+            animation: pulse 1s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.7; transform: scale(1.05); }
+        }
+        
+        /* Loading */
+        #loading {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: #0a0a1a;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 200;
+            transition: opacity 0.5s;
+        }
+        #loading.hidden { opacity: 0; pointer-events: none; }
+        .loader {
+            width: 60px; height: 60px;
+            border: 4px solid rgba(100,255,218,0.2);
+            border-top-color: #64ffda;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .loading-text {
+            color: #64ffda;
+            margin-top: 20px;
+            font-size: 1.2rem;
+            letter-spacing: 3px;
+        }
+        
+        /* Tutorial hint */
+        #tutorial-hint {
+            position: fixed;
+            bottom: 100px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.7);
+            padding: 15px 30px;
+            border-radius: 25px;
+            color: white;
+            font-size: 1rem;
+            pointer-events: none;
+            z-index: 50;
+            opacity: 0;
+            transition: opacity 0.5s;
+            text-align: center;
+        }
+        #tutorial-hint.show { opacity: 1; }
+        .tutorial-keys {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 10px;
+        }
+        .key {
+            background: rgba(255,255,255,0.2);
+            padding: 8px 15px;
+            border-radius: 8px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <!-- Loading -->
+    <div id="loading">
+        <div class="loader"></div>
+        <div class="loading-text">LOADING...</div>
+    </div>
+    
+    <!-- Menu Screen -->
+    <div id="menu-screen" class="screen">
+        <div class="title">INDO PARK RUNNER</div>
+        <div class="subtitle">Endless 3D Runner</div>
+        <div id="best-score-display" class="best-score"></div>
+        <button class="btn btn-primary" onclick="showSelectScreen()">▶ PLAY</button>
+        <button class="btn btn-secondary" onclick="toggleSound()" id="sound-btn">🔊 SOUND</button>
+    </div>
+    
+    <!-- Selection Screen -->
+    <div id="select-screen" class="screen hidden">
+        <div class="section-title">Choose Character</div>
+        <div class="selection-grid" id="character-grid"></div>
+        
+        <div class="section-title">Select City</div>
+        <div class="selection-grid" id="city-grid"></div>
+        
+        <div style="margin-top: 40px;">
+            <button class="btn btn-primary" onclick="startGame()">▶ START</button>
+            <button class="btn btn-secondary" onclick="showMenuScreen()">← BACK</button>
+        </div>
+    </div>
+    
+    <!-- HUD -->
+    <div id="hud" class="hidden">
+        <div class="hud-item"><span class="hud-icon">🏃</span><span id="distance-display">0m</span></div>
+        <div class="hud-item" id="score-display"><span class="hud-icon">⭐</span><span id="score-display-inner">0</span></div>
+        <div class="hud-item" id="coin-display"><span class="hud-icon">🪙</span><span id="coins-display">0</span></div>
+        <div class="hud-item" id="powerup-display"></div>
+    </div>
+    
+    <!-- Tutorial Hint -->
+    <div id="tutorial-hint">
+        <div>Swipe or use Arrow Keys to switch lanes</div>
+        <div class="tutorial-keys">
+            <span class="key">←</span>
+            <span class="key">↓</span>
+            <span class="key">→</span>
+        </div>
+    </div>
+    
+    <!-- Game Over Screen -->
+    <div id="gameover-screen" class="screen hidden">
+        <div class="gameover-title">GAME OVER</div>
+        <div id="new-best" class="new-best hidden">🏆 NEW BEST!</div>
+        <div class="final-stats">
+            <div class="stat">
+                <span class="stat-value" id="final-distance">0</span>
+                <span class="stat-label">Distance (m)</span>
+            </div>
+            <div class="stat">
+                <span class="stat-value" id="final-coins">0</span>
+                <span class="stat-label">Coins</span>
+            </div>
+            <div class="stat">
+                <span class="stat-value" id="final-score">0</span>
+                <span class="stat-label">Score</span>
+            </div>
+        </div>
+        <div>
+            <button class="btn btn-primary" onclick="restartGame()">↻ REPLAY</button>
+            <button class="btn btn-secondary" onclick="showMenuScreen()">🏠 MENU</button>
+        </div>
+    </div>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+    // ==================== GAME CONFIG ====================
+    const CONFIG = {
+        lanes: [-3, 0, 3],
+        laneWidth: 3,
+        worldLength: 200,
+        obstacleSpeed: 0.3,
+        coinSpeed: 0.35,
+        playerSpeed: 0.5,
+        speedIncrease: 0.00005,
+        spawnInterval: 60,
+        coinValue: 10,
+        distanceMultiplier: 1,
+        powerUpDuration: 8000,
+        magnetRadius: 5
+    };
+
+    // ==================== AUDIO ENGINE ====================
+    let audioCtx = null;
+
+    function initAudio() {
+        if (!audioCtx) {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        if (audioCtx.state === 'suspended') {
+            audioCtx.resume();
+        }
+    }
+
+    function playSound(type) {
+        if (!audioCtx || !soundEnabled) return;
+        try {
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            const now = audioCtx.currentTime;
+
+            switch(type) {
+                case 'coin':
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(880, now);
+                    osc.frequency.exponentialRampToValueAtTime(1760, now + 0.1);
+                    gain.gain.setValueAtTime(0.3, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+                    osc.start(now);
+                    osc.stop(now + 0.15);
+                    break;
+                case 'gameover':
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(440, now);
+                    osc.frequency.exponentialRampToValueAtTime(110, now + 0.5);
+                    gain.gain.setValueAtTime(0.3, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
+                    osc.start(now);
+                    osc.stop(now + 0.5);
+                    break;
+                case 'switch':
+                    osc.type = 'square';
+                    osc.frequency.setValueAtTime(600, now);
+                    gain.gain.setValueAtTime(0.1, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.05);
+                    osc.start(now);
+                    osc.stop(now + 0.05);
+                    break;
+                case 'powerup':
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(440, now);
+                    osc.frequency.exponentialRampToValueAtTime(880, now + 0.1);
+                    osc.frequency.exponentialRampToValueAtTime(1320, now + 0.2);
+                    gain.gain.setValueAtTime(0.3, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+                    osc.start(now);
+                    osc.stop(now + 0.3);
+                    break;
+            }
+        } catch(e) {}
+    }
+
+    // Background music
+    let musicPlaying = false;
+    let musicNodes = [];
+    let soundEnabled = true;
+
+    function toggleSound() {
+        soundEnabled = !soundEnabled;
+        const btn = document.getElementById('sound-btn');
+        if (btn) btn.textContent = soundEnabled ? '🔊 SOUND' : '🔇 MUTED';
+        if (!soundEnabled) {
+            stopMusic();
+        }
+    }
+
+    function startMusic() {
+        if (!audioCtx || musicPlaying || !soundEnabled) return;
+        musicPlaying = true;
+        try {
+            // Bass line
+            const bassOsc = audioCtx.createOscillator();
+            const bassGain = audioCtx.createGain();
+            bassOsc.type = 'triangle';
+            bassOsc.frequency.value = 110;
+            bassGain.gain.value = 0.08;
+            bassOsc.connect(bassGain);
+            bassGain.connect(audioCtx.destination);
+            bassOsc.start();
+            musicNodes.push({ osc: bassOsc, gain: bassGain });
+
+            // Melody (simple loop)
+            const melodyNotes = [440, 494, 523, 587, 523, 494, 440, 392];
+            let noteIndex = 0;
+            const melodyOsc = audioCtx.createOscillator();
+            const melodyGain = audioCtx.createGain();
+            melodyOsc.type = 'sine';
+            melodyGain.gain.value = 0.05;
+            melodyOsc.connect(melodyGain);
+            melodyGain.connect(audioCtx.destination);
+            melodyOsc.start();
+            musicNodes.push({ osc: melodyOsc, gain: melodyGain });
+
+            // Arpeggiator
+            setInterval(() => {
+                if (!musicPlaying) return;
+                melodyOsc.frequency.setValueAtTime(melodyNotes[noteIndex % melodyNotes.length], audioCtx.currentTime);
+                noteIndex++;
+            }, 250);
+
+            // Hi-hat rhythm
+            setInterval(() => {
+                if (!musicPlaying) return;
+                const noise = audioCtx.createOscillator();
+                const noiseGain = audioCtx.createGain();
+                noise.type = 'square';
+                noise.frequency.value = 8000 + Math.random() * 2000;
+                noiseGain.gain.setValueAtTime(0.02, audioCtx.currentTime);
+                noiseGain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.05);
+                noise.connect(noiseGain);
+                noiseGain.connect(audioCtx.destination);
+                noise.start();
+                noise.stop(audioCtx.currentTime + 0.05);
+            }, 200);
+        } catch(e) {}
+    }
+
+    function stopMusic() {
+        musicPlaying = false;
+        musicNodes.forEach(n => { try { n.osc.stop(); } catch(e) {} });
+        musicNodes = [];
+    }
+    
+    // ==================== GAME STATE ====================
+    let gameState = {
+        screen: 'menu',
+        character: 'runner1',
+        city: 'delhi',
+        distance: 0,
+        score: 0,
+        coins: 0,
+        speed: CONFIG.playerSpeed,
+        isPlaying: false,
+        isGameOver: false,
+        bestDistance: parseInt(localStorage.getItem('indoRunner_bestDistance') || '0'),
+        currentLane: 1,
+        targetLane: 1,
+        frameCount: 0,
+        powerUps: { shield: false, magnet: false, slowmo: false },
+        powerUpTimers: { shield: null, magnet: null, slowmo: null }
+    };
+
+    // ==================== PARTICLES ====================
+    let particles = [];
+
+    function createParticleBurst(x, y, z, color, count = 12) {
+        for (let i = 0; i < count; i++) {
+            const geo = new THREE.SphereGeometry(0.08, 6, 6);
+            const mat = new THREE.MeshBasicMaterial({ color: color });
+            const p = new THREE.Mesh(geo, mat);
+            p.position.set(x, y, z);
+            p.userData = {
+                vx: (Math.random() - 0.5) * 0.3,
+                vy: Math.random() * 0.2 + 0.1,
+                vz: (Math.random() - 0.5) * 0.3,
+                life: 1.0
+            };
+            scene.add(p);
+            particles.push(p);
+        }
+    }
+
+    function updateParticles() {
+        for (let i = particles.length - 1; i >= 0; i--) {
+            const p = particles[i];
+            p.position.x += p.userData.vx;
+            p.position.y += p.userData.vy;
+            p.position.z += p.userData.vz;
+            p.userData.vy -= 0.01; // gravity
+            p.userData.life -= 0.03;
+            p.scale.setScalar(p.userData.life);
+            if (p.userData.life <= 0) {
+                scene.remove(p);
+                particles.splice(i, 1);
+            }
+        }
+    }
+
+    // ==================== POWER-UPS ====================
+    const POWERUP_TYPES = [
+        { id: 'shield', name: 'Shield', color: 0x00ffff, icon: '🛡️' },
+        { id: 'magnet', name: 'Magnet', color: 0xff00ff, icon: '🧲' },
+        { id: 'slowmo', name: 'Slow-Mo', color: 0xffff00, icon: '⏱️' }
+    ];
+
+    function createPowerUp() {
+        const type = POWERUP_TYPES[Math.floor(Math.random() * POWERUP_TYPES.length)];
+        const lane = Math.floor(Math.random() * 3);
+        const group = new THREE.Group();
+
+        // Outer glow ring
+        const ringGeo = new THREE.TorusGeometry(0.6, 0.08, 8, 24);
+        const ringMat = new THREE.MeshBasicMaterial({ color: type.color, opacity: 0.6, transparent: true });
+        const ring = new THREE.Mesh(ringGeo, ringMat);
+        ring.rotation.x = Math.PI / 2;
+        group.add(ring);
+
+        // Inner core
+        const coreGeo = new THREE.OctahedronGeometry(0.4, 0);
+        const coreMat = new THREE.MeshLambertMaterial({ color: type.color, emissive: type.color, emissiveIntensity: 0.5 });
+        const core = new THREE.Mesh(coreGeo, coreMat);
+        group.add(core);
+
+        group.position.set(CONFIG.lanes[lane], 1.5, -CONFIG.worldLength);
+        group.userData = { lane, type: type.id, collected: false };
+        scene.add(group);
+        return group;
+    }
+
+    function activatePowerUp(type) {
+        playSound('powerup');
+        gameState.powerUps[type] = true;
+
+        // Visual feedback on player
+        if (type === 'shield') {
+            createShieldEffect();
+        }
+
+        // Clear existing timer
+        if (gameState.powerUpTimers[type]) {
+            clearTimeout(gameState.powerUpTimers[type]);
+        }
+
+        // Auto-deactivate after duration
+        gameState.powerUpTimers[type] = setTimeout(() => {
+            gameState.powerUps[type] = false;
+            if (type === 'shield') removeShieldEffect();
+            updatePowerUpHUD();
+        }, CONFIG.powerUpDuration);
+
+        updatePowerUpHUD();
+    }
+
+    let shieldMesh = null;
+
+    function createShieldEffect() {
+        if (shieldMesh) removeShieldEffect();
+        const geo = new THREE.SphereGeometry(1.2, 16, 16);
+        const mat = new THREE.MeshBasicMaterial({ color: 0x00ffff, opacity: 0.2, transparent: true, side: THREE.DoubleSide });
+        shieldMesh = new THREE.Mesh(geo, mat);
+        shieldMesh.position.copy(player.position);
+        scene.add(shieldMesh);
+    }
+
+    function removeShieldEffect() {
+        if (shieldMesh) {
+            scene.remove(shieldMesh);
+            shieldMesh = null;
+        }
+    }
+
+    function updatePowerUpHUD() {
+        const icons = [];
+        if (gameState.powerUps.shield) icons.push('🛡️');
+        if (gameState.powerUps.magnet) icons.push('🧲');
+        if (gameState.powerUps.slowmo) icons.push('⏱️');
+        const el = document.getElementById('powerup-display');
+        if (el) el.textContent = icons.join(' ');
+    }
+    
+    // ==================== CHARACTERS & CITIES ====================
+    const CHARACTERS = [
+        { id: 'runner1', name: 'Alex', color: 0xff6b35, icon: '🏃' },
+        { id: 'runner2', name: 'Riya', color: 0xe91e63, icon: '🏃‍♀️' },
+        { id: 'runner3', name: 'Kiran', color: 0x2196f3, icon: '🧑‍🦱' },
+        { id: 'runner4', name: 'Priya', color: 0x9c27b0, icon: '👩‍🦰' }
+    ];
+    
+    const CITIES = [
+        { id: 'delhi', name: 'Delhi', color: 0xff9800, groundColor: 0x8d6e63, skyColor: 0xffb74d },
+        { id: 'mumbai', name: 'Mumbai', color: 0x00bcd4, groundColor: 0x607d8b, skyColor: 0x4dd0e1 },
+        { id: 'bangalore', name: 'Bangalore', color: 0x4caf50, groundColor: 0x795548, skyColor: 0x81c784 },
+        { id: 'kolkata', name: 'Kolkata', color: 0x673ab7, groundColor: 0x5d4037, skyColor: 0x9575cd }
+    ];
+    
+    // ==================== THREE.JS SETUP ====================
+    let scene, camera, renderer;
+    let player, playerMixer;
+    let obstacles = [], coins = [], buildings = [], powerUps = [];
+    let ground, ground2;
+    let cityConfig = CITIES[0];
+    let charConfig = CHARACTERS[0];
+    
+    function initThreeJS() {
+        scene = new THREE.Scene();
+        scene.fog = new THREE.Fog(cityConfig.skyColor, 50, 150);
+        
+        camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(-8, 5, 0);
+        camera.lookAt(5, 1, 0);
+        
+        renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.shadowMap.enabled = true;
+        document.body.insertBefore(renderer.domElement, document.body.firstChild);
+        
+        // Lighting
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+        scene.add(ambientLight);
+        
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        directionalLight.position.set(10, 20, 5);
+        directionalLight.castShadow = true;
+        directionalLight.shadow.mapSize.width = 1024;
+        directionalLight.shadow.mapSize.height = 1024;
+        scene.add(directionalLight);
+        
+        window.addEventListener('resize', onWindowResize);
+    }
+    
+    function onWindowResize() {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+    }
+    
+    // ==================== CITY BUILDING ====================
+    function createCity() {
+        // Clear existing
+        buildings.forEach(b => scene.remove(b));
+        buildings = [];
+        
+        // Ground
+        if (ground) scene.remove(ground);
+        if (ground2) scene.remove(ground2);
+        
+        const groundGeo = new THREE.PlaneGeometry(20, CONFIG.worldLength * 2);
+        const groundMat = new THREE.MeshLambertMaterial({ color: cityConfig.groundColor });
+        ground = new THREE.Mesh(groundGeo, groundMat);
+        ground.rotation.x = -Math.PI / 2;
+        ground.position.z = -CONFIG.worldLength / 2;
+        ground.receiveShadow = true;
+        scene.add(ground);
+        
+        ground2 = ground.clone();
+        ground2.position.z = -CONFIG.worldLength * 1.5;
+        scene.add(ground2);
+        
+        // Track lanes (subtle)
+        for (let i = 0; i < 3; i++) {
+            const trackGeo = new THREE.PlaneGeometry(0.2, CONFIG.worldLength * 2);
+            const trackMat = new THREE.MeshBasicMaterial({ color: 0xffffff, opacity: 0.1, transparent: true });
+            const track = new THREE.Mesh(trackGeo, trackMat);
+            track.rotation.x = -Math.PI / 2;
+            track.position.set(CONFIG.lanes[i], 0.01, -CONFIG.worldLength / 2);
+            scene.add(track);
+        }
+        
+        // Buildings on sides
+        for (let z = 0; z > -CONFIG.worldLength * 2; z -= 15) {
+            for (let side = -1; side <= 1; side += 2) {
+                const height = 8 + Math.random() * 20;
+                const width = 5 + Math.random() * 8;
+                const depth = 5 + Math.random() * 8;
+                
+                const buildingGeo = new THREE.BoxGeometry(width, height, depth);
+                const buildingMat = new THREE.MeshLambertMaterial({ 
+                    color: new THREE.Color().setHSL(Math.random() * 0.1 + 0.55, 0.3, 0.4)
+                });
+                const building = new THREE.Mesh(buildingGeo, buildingMat);
+                building.position.set(side * (12 + Math.random() * 5), height / 2, z + Math.random() * 10);
+                building.castShadow = true;
+                building.receiveShadow = true;
+                scene.add(building);
+                buildings.push(building);
+                
+                // Windows
+                const windowGeo = new THREE.PlaneGeometry(0.8, 1.2);
+                const windowMat = new THREE.MeshBasicMaterial({ color: 0xffff88, opacity: 0.8, transparent: true });
+                
+                for (let wy = 2; wy < height - 2; wy += 3) {
+                    for (let wz = -depth/2 + 2; wz < depth/2 - 2; wz += 3) {
+                        if (Math.random() > 0.3) {
+                            const win = new THREE.Mesh(windowGeo, windowMat.clone());
+                            win.position.set(side * (12 + Math.random() * 5) + side * (-width/2 - 0.1), wy, z + Math.random() * 10 + wz);
+                            if (side === -1) win.rotation.y = Math.PI;
+                            scene.add(win);
+                            buildings.push(win);
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    // ==================== PLAYER ====================
+    function createPlayer() {
+        if (player) scene.remove(player);
+        
+        player = new THREE.Group();
+        
+        // Body
+        const bodyGeo = new THREE.CapsuleGeometry(0.3, 0.8, 4, 8);
+        const bodyMat = new THREE.MeshLambertMaterial({ color: charConfig.color });
+        const body = new THREE.Mesh(bodyGeo, bodyMat);
+        body.position.y = 0.8;
+        body.castShadow = true;
+        player.add(body);
+        
+        // Head
+        const headGeo = new THREE.SphereGeometry(0.25, 16, 16);
+        const headMat = new THREE.MeshLambertMaterial({ color: 0xffdbac });
+        const head = new THREE.Mesh(headGeo, headMat);
+        head.position.y = 1.5;
+        head.castShadow = true;
+        player.add(head);
+        
+        // Eyes
+        const eyeGeo = new THREE.SphereGeometry(0.05, 8, 8);
+        const eyeMat = new THREE.MeshBasicMaterial({ color: 0x000000 });
+        const eyeL = new THREE.Mesh(eyeGeo, eyeMat);
+        eyeL.position.set(-0.1, 1.55, 0.2);
+        player.add(eyeL);
+        const eyeR = new THREE.Mesh(eyeGeo, eyeMat);
+        eyeR.position.set(0.1, 1.55, 0.2);
+        player.add(eyeR);
+        
+        // Arms
+        const armGeo = new THREE.CapsuleGeometry(0.1, 0.5, 4, 8);
+        const armMat = new THREE.MeshLambertMaterial({ color: charConfig.color });
+        const armL = new THREE.Mesh(armGeo, armMat);
+        armL.position.set(-0.4, 0.9, 0);
+        armL.rotation.z = 0.3;
+        player.add(armL);
+        const armR = new THREE.Mesh(armGeo, armMat);
+        armR.position.set(0.4, 0.9, 0);
+        armR.rotation.z = -0.3;
+        player.add(armR);
+        
+        // Legs
+        const legGeo = new THREE.CapsuleGeometry(0.12, 0.5, 4, 8);
+        const legMat = new THREE.MeshLambertMaterial({ color: 0x333333 });
+        const legL = new THREE.Mesh(legGeo, legMat);
+        legL.position.set(-0.15, 0.2, 0);
+        player.add(legL);
+        const legR = new THREE.Mesh(legGeo, legMat);
+        legR.position.set(0.15, 0.2, 0);
+        player.add(legR);
+        
+        player.position.set(CONFIG.lanes[gameState.currentLane], 0, 0);
+        scene.add(player);
+    }
+    
+    // ==================== OBSTACLES ====================
+    function createObstacle() {
+        const lane = Math.floor(Math.random() * 3);
+        const obstacleType = Math.random();
+        
+        let obstacle;
+        
+        if (obstacleType < 0.4) {
+            // Train/Barrier
+            const trainGeo = new THREE.BoxGeometry(2, 2.5, 1.5);
+            const trainMat = new THREE.MeshLambertMaterial({ color: 0x333333 });
+            obstacle = new THREE.Mesh(trainGeo, trainMat);
+            obstacle.position.y = 1.25;
+            
+            // Stripes
+            const stripeGeo = new THREE.BoxGeometry(2.1, 0.3, 1.6);
+            const stripeMat = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+            for (let i = 0; i < 3; i++) {
+                const stripe = new THREE.Mesh(stripeGeo, stripeMat);
+                stripe.position.y = 0.5 + i * 1;
+                obstacle.add(stripe);
+            }
+        } else if (obstacleType < 0.7) {
+            // Barrier
+            const barrierGeo = new THREE.BoxGeometry(2.5, 0.8, 0.5);
+            const barrierMat = new THREE.MeshLambertMaterial({ color: 0xff6600 });
+            obstacle = new THREE.Mesh(barrierGeo, barrierMat);
+            obstacle.position.y = 0.4;
+        } else {
+            // Gap (visual)
+            const gapGeo = new THREE.BoxGeometry(2, 0.1, 3);
+            const gapMat = new THREE.MeshBasicMaterial({ color: 0x111111 });
+            obstacle = new THREE.Mesh(gapGeo, gapMat);
+            obstacle.position.y = -0.5;
+        }
+        
+        obstacle.position.x = CONFIG.lanes[lane];
+        obstacle.position.z = -CONFIG.worldLength;
+        obstacle.userData = { lane, type: obstacleType < 0.4 ? 'train' : obstacleType < 0.7 ? 'barrier' : 'gap' };
+        obstacle.castShadow = true;
+        
+        scene.add(obstacle);
+        obstacles.push(obstacle);
+    }
+    
+    // ==================== COINS ====================
+    function createCoin(z, lane) {
+        const coinGroup = new THREE.Group();
+        
+        const coinGeo = new THREE.TorusGeometry(0.3, 0.08, 8, 24);
+        const coinMat = new THREE.MeshLambertMaterial({ color: 0xffd700 });
+        const coin = new THREE.Mesh(coinGeo, coinMat);
+        coin.rotation.y = Math.PI / 2;
+        coinGroup.add(coin);
+        
+        // Inner detail
+        const innerGeo = new THREE.CircleGeometry(0.2, 16);
+        const innerMat = new THREE.MeshBasicMaterial({ color: 0xffaa00 });
+        const inner = new THREE.Mesh(innerGeo, innerMat);
+        inner.position.z = 0.05;
+        coinGroup.add(inner);
+        
+        coinGroup.position.set(CONFIG.lanes[lane], 1.2, z);
+        coinGroup.userData = { lane, collected: false };
+        
+        scene.add(coinGroup);
+        coins.push(coinGroup);
+    }
+    
+    function spawnCoinRow() {
+        const lane = Math.floor(Math.random() * 3);
+        const rows = 3 + Math.floor(Math.random() * 3);
+        for (let i = 0; i < rows; i++) {
+            createCoin(-CONFIG.worldLength + i * 2, lane);
+        }
+    }
+    
+    // ==================== GAME LOOP ====================
+    let playerLegAngle = 0;
+
+    function update() {
+        if (!gameState.isPlaying || gameState.isGameOver) return;
+
+        gameState.frameCount++;
+        const speedMult = gameState.powerUps.slowmo ? 0.5 : 1;
+        gameState.distance += gameState.speed * CONFIG.distanceMultiplier * speedMult;
+        gameState.score = Math.floor(gameState.distance) + (gameState.coins * CONFIG.coinValue);
+        gameState.speed += CONFIG.speedIncrease * speedMult;
+
+        // Move player to target lane
+        const targetX = CONFIG.lanes[gameState.targetLane];
+        player.position.x += (targetX - player.position.x) * 0.15;
+        player.position.z = Math.sin(gameState.frameCount * 0.1) * 0.1;
+
+        // Shield effect follows player
+        if (shieldMesh) {
+            shieldMesh.position.copy(player.position);
+            shieldMesh.rotation.y += 0.02;
+        }
+
+        // Running animation
+        playerLegAngle += gameState.speed * 0.5 * speedMult;
+        if (player.children[5]) player.children[5].rotation.x = Math.sin(playerLegAngle) * 0.5;
+        if (player.children[6]) player.children[6].rotation.x = Math.sin(playerLegAngle + Math.PI) * 0.5;
+
+        // Move obstacles
+        for (let i = obstacles.length - 1; i >= 0; i--) {
+            const obs = obstacles[i];
+            obs.position.z += (gameState.speed + CONFIG.obstacleSpeed) * speedMult;
+
+            // Collision detection
+            if (Math.abs(obs.position.z) < 1.5 && Math.abs(obs.position.x - player.position.x) < 1.2) {
+                if (obs.userData.type === 'gap') {
+                    if (player.position.y < 0.3) {
+                        if (!gameState.powerUps.shield) { gameOver(); return; }
+                    }
+                } else {
+                    if (!gameState.powerUps.shield) { gameOver(); return; }
+                }
+            }
+
+            // Remove passed obstacles
+            if (obs.position.z > 10) {
+                scene.remove(obs);
+                obstacles.splice(i, 1);
+            }
+        }
+
+        // Move coins + magnet attraction
+        for (let i = coins.length - 1; i >= 0; i--) {
+            const coin = coins[i];
+            coin.position.z += (gameState.speed + CONFIG.coinSpeed) * speedMult;
+            coin.rotation.x += 0.1 * speedMult;
+            coin.rotation.z += 0.05 * speedMult;
+
+            // Magnet attraction
+            if (gameState.powerUps.magnet && !coin.userData.collected) {
+                const dx = player.position.x - coin.position.x;
+                const dz = player.position.z - coin.position.z;
+                const dist = Math.sqrt(dx*dx + dz*dz);
+                if (dist < CONFIG.magnetRadius && dist > 0.1) {
+                    coin.position.x += (dx / dist) * 0.3;
+                    coin.position.z += (dz / dist) * 0.3;
+                }
+            }
+
+            // Coin collection
+            if (!coin.userData.collected &&
+                Math.abs(coin.position.z) < 1 &&
+                Math.abs(coin.position.x - player.position.x) < 1.5) {
+                coin.userData.collected = true;
+                gameState.coins++;
+                playSound('coin');
+                createParticleBurst(coin.position.x, coin.position.y, coin.position.z, 0xffd700, 8);
+                scene.remove(coin);
+                coins.splice(i, 1);
+                continue;
+            }
+
+            if (coin.position.z > 10) {
+                scene.remove(coin);
+                coins.splice(i, 1);
+            }
+        }
+
+        // Move power-ups
+        for (let i = powerUps.length - 1; i >= 0; i--) {
+            const pu = powerUps[i];
+            pu.position.z += (gameState.speed + CONFIG.coinSpeed) * speedMult;
+            pu.rotation.y += 0.03 * speedMult;
+            if (pu.children[0]) pu.children[0].rotation.z += 0.02;
+            if (pu.children[1]) pu.children[1].rotation.y += 0.05;
+
+            // Power-up collection
+            if (!pu.userData.collected &&
+                Math.abs(pu.position.z) < 1.5 &&
+                Math.abs(pu.position.x - player.position.x) < 1.5) {
+                pu.userData.collected = true;
+                activatePowerUp(pu.userData.type);
+                createParticleBurst(pu.position.x, pu.position.y, pu.position.z, POWERUP_TYPES.find(p => p.id === pu.userData.type).color, 16);
+                scene.remove(pu);
+                powerUps.splice(i, 1);
+                continue;
+            }
+
+            if (pu.position.z > 10) {
+                scene.remove(pu);
+                powerUps.splice(i, 1);
+            }
+        }
+
+        // Update particles
+        updateParticles();
+
+        // Spawn obstacles
+        if (gameState.frameCount % CONFIG.spawnInterval === 0) {
+            createObstacle();
+        }
+
+        // Spawn coins
+        if (gameState.frameCount % (CONFIG.spawnInterval * 2) === 0) {
+            spawnCoinRow();
+        }
+
+        // Spawn power-ups (rare)
+        if (gameState.frameCount % (CONFIG.spawnInterval * 15) === 0) {
+            powerUps.push(createPowerUp());
+        }
+
+        // Move ground
+        if (ground.position.z > CONFIG.worldLength) {
+            ground.position.z -= CONFIG.worldLength * 2;
+        }
+        if (ground2.position.z > CONFIG.worldLength) {
+            ground2.position.z -= CONFIG.worldLength * 2;
+        }
+
+        // Move buildings
+        buildings.forEach(b => {
+            b.position.z += gameState.speed * speedMult * 0.5;
+            if (b.position.z > 50) {
+                b.position.z -= CONFIG.worldLength * 2;
+            }
+        });
+
+        // Camera slight movement
+        camera.position.y = 5 + Math.sin(gameState.frameCount * 0.05) * 0.1;
+
+        updateHUD();
+    }
+    
+    function updateHUD() {
+        document.getElementById('distance-display').textContent = Math.floor(gameState.distance) + 'm';
+        document.getElementById('score-display-inner').textContent = gameState.score;
+        document.getElementById('coins-display').textContent = gameState.coins;
+    }
+    
+    // ==================== GAME STATES ====================
+    function showMenuScreen() {
+        gameState.screen = 'menu';
+        gameState.isPlaying = false;
+        stopMusic();
+        const best = localStorage.getItem('indoRunner_bestDistance') || '0';
+        const el = document.getElementById('best-score-display');
+        if (el) el.textContent = best > 0 ? `🏆 BEST: ${best}m` : '';
+        document.getElementById('menu-screen').classList.remove('hidden');
+        document.getElementById('select-screen').classList.add('hidden');
+        document.getElementById('gameover-screen').classList.add('hidden');
+        document.getElementById('hud').classList.add('hidden');
+        document.getElementById('tutorial-hint').classList.remove('show');
+        if (shieldMesh) removeShieldEffect();
+    }
+    
+    function showSelectScreen() {
+        gameState.screen = 'select';
+        document.getElementById('menu-screen').classList.add('hidden');
+        document.getElementById('select-screen').classList.remove('hidden');
+        renderSelectionGrids();
+    }
+    
+    function renderSelectionGrids() {
+        const charGrid = document.getElementById('character-grid');
+        const cityGrid = document.getElementById('city-grid');
+        
+        charGrid.innerHTML = CHARACTERS.map(c => `
+            <div class="selection-item ${c.id === gameState.character ? 'selected' : ''}" 
+                 onclick="selectCharacter('${c.id}')">
+                <div class="icon">${c.icon}</div>
+                <div class="name">${c.name}</div>
+            </div>
+        `).join('');
+        
+        cityGrid.innerHTML = CITIES.map(c => `
+            <div class="selection-item ${c.id === gameState.city ? 'selected' : ''}" 
+                 onclick="selectCity('${c.id}')">
+                <div class="icon">🏙️</div>
+                <div class="name">${c.name}</div>
+            </div>
+        `).join('');
+    }
+    
+    function selectCharacter(id) {
+        gameState.character = id;
+        charConfig = CHARACTERS.find(c => c.id === id);
+        renderSelectionGrids();
+    }
+    
+    function selectCity(id) {
+        gameState.city = id;
+        cityConfig = CITIES.find(c => c.id === id);
+        if (scene) {
+            scene.fog = new THREE.Fog(cityConfig.skyColor, 50, 150);
+            scene.background = new THREE.Color(cityConfig.skyColor);
+        }
+        renderSelectionGrids();
+    }
+    
+    function startGame() {
+        initAudio();
+        startMusic();
+
+        gameState.screen = 'game';
+        gameState.isPlaying = true;
+        gameState.isGameOver = false;
+        gameState.distance = 0;
+        gameState.score = 0;
+        gameState.coins = 0;
+        gameState.speed = CONFIG.playerSpeed;
+        gameState.frameCount = 0;
+        gameState.currentLane = 1;
+        gameState.targetLane = 1;
+        gameState.powerUps = { shield: false, magnet: false, slowmo: false };
+        Object.values(gameState.powerUpTimers).forEach(t => clearTimeout(t));
+        gameState.powerUpTimers = { shield: null, magnet: null, slowmo: null };
+
+        document.getElementById('select-screen').classList.add('hidden');
+        document.getElementById('hud').classList.remove('hidden');
+
+        // Clear game objects
+        obstacles.forEach(o => scene.remove(o));
+        obstacles = [];
+        coins.forEach(c => scene.remove(c));
+        coins = [];
+        powerUps.forEach(p => scene.remove(p));
+        powerUps = [];
+        particles.forEach(p => scene.remove(p));
+        particles = [];
+
+        createCity();
+        createPlayer();
+
+        scene.background = new THREE.Color(cityConfig.skyColor);
+
+        // Show tutorial briefly
+        setTimeout(() => {
+            document.getElementById('tutorial-hint').classList.add('show');
+            setTimeout(() => {
+                document.getElementById('tutorial-hint').classList.remove('show');
+            }, 4000);
+        }, 500);
+    }
+    
+    function gameOver() {
+        gameState.isGameOver = true;
+        gameState.isPlaying = false;
+        playSound('gameover');
+        stopMusic();
+
+        const isNewBest = gameState.distance > gameState.bestDistance;
+        if (isNewBest) {
+            gameState.bestDistance = Math.floor(gameState.distance);
+            localStorage.setItem('indoRunner_bestDistance', gameState.bestDistance);
+        }
+
+        document.getElementById('hud').classList.add('hidden');
+        document.getElementById('gameover-screen').classList.remove('hidden');
+        document.getElementById('final-distance').textContent = Math.floor(gameState.distance);
+        document.getElementById('final-coins').textContent = gameState.coins;
+        document.getElementById('final-score').textContent = gameState.score;
+        document.getElementById('new-best').classList.toggle('hidden', !isNewBest);
+
+        if (shieldMesh) removeShieldEffect();
+    }
+    
+    function restartGame() {
+        document.getElementById('gameover-screen').classList.add('hidden');
+        startGame();
+    }
+    
+    // ==================== CONTROLS ====================
+    function switchLane(direction) {
+        if (!gameState.isPlaying) return;
+
+        if (direction === 'left' && gameState.targetLane > 0) {
+            gameState.targetLane--;
+            playSound('switch');
+        } else if (direction === 'right' && gameState.targetLane < 2) {
+            gameState.targetLane++;
+            playSound('switch');
+        }
+    }
+    
+    // Keyboard
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowLeft' || e.key === 'a') switchLane('left');
+        if (e.key === 'ArrowRight' || e.key === 'd') switchLane('right');
+        if (e.key === 'ArrowDown' || e.key === 's') gameState.targetLane = 1;
+        if (e.key === ' ' && gameState.isGameOver) restartGame();
+    });
+    
+    // Touch swipe
+    let touchStartX = 0;
+    let touchStartY = 0;
+    
+    document.addEventListener('touchstart', (e) => {
+        touchStartX = e.touches[0].clientX;
+        touchStartY = e.touches[0].clientY;
+    }, { passive: true });
+    
+    document.addEventListener('touchend', (e) => {
+        if (!gameState.isPlaying) return;
+        
+        const dx = e.changedTouches[0].clientX - touchStartX;
+        const dy = e.changedTouches[0].clientY - touchStartY;
+        
+        if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 30) {
+            if (dx > 0) switchLane('right');
+            else switchLane('left');
+        }
+    }, { passive: true });
+    
+    // ==================== RENDER LOOP ====================
+    function animate() {
+        requestAnimationFrame(animate);
+        update();
+        renderer.render(scene, camera);
+    }
+    
+    // ==================== INIT ====================
+    function init() {
+        initThreeJS();
+
+        // Set initial background
+        scene.background = new THREE.Color(cityConfig.skyColor);
+
+        // Show best score on menu
+        const best = localStorage.getItem('indoRunner_bestDistance') || '0';
+        const bestEl = document.getElementById('best-score-display');
+        if (bestEl) bestEl.textContent = best > 0 ? `🏆 BEST: ${best}m` : '';
+
+        // Hide loading
+        setTimeout(() => {
+            document.getElementById('loading').classList.add('hidden');
+        }, 500);
+
+        animate();
+    }
+    
+    // Start when loaded
+    window.addEventListener('load', init);
+    </script>
+</body>
+</html>
